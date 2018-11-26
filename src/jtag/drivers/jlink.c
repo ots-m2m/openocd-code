@@ -522,9 +522,9 @@ static int jaylink_log_handler(const struct jaylink_context *ctx,
 	case JAYLINK_LOG_LEVEL_DEBUG:
 		tmp = LOG_LVL_DEBUG;
 		break;
-	case JAYLINK_LOG_LEVEL_DEBUG_IO:
+/*	case JAYLINK_LOG_LEVEL_DEBUG_IO:
 		tmp = LOG_LVL_DEBUG_IO;
-		break;
+		break; */
 	default:
 		tmp = LOG_LVL_WARNING;
 	}
@@ -575,8 +575,9 @@ static int jlink_init(void)
 
 	host_interfaces = JAYLINK_HIF_USB;
 
-	if (use_serial_number)
+/*	if (use_serial_number)
 		host_interfaces |= JAYLINK_HIF_TCP;
+*/
 
 	ret = jaylink_discovery_scan(jayctx, host_interfaces);
 

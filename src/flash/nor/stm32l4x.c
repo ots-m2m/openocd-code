@@ -360,7 +360,7 @@ static int stm32l4_erase(struct flash_bank *bank, int first, int last)
 	Sector Erase
 	To erase a sector, follow the procedure below:
 	1. Check that no Flash memory operation is ongoing by
-       checking the BSY bit in the FLASH_SR register
+	   checking the BSY bit in the FLASH_SR register
 	2. Set the PER bit and select the page and bank
 	   you wish to erase  in the FLASH_CR register
 	3. Set the STRT bit in the FLASH_CR register
@@ -591,9 +591,16 @@ static int stm32l4_probe(struct flash_bank *bank)
 	if (retval != ERROR_OK)
 		return retval;
 	LOG_INFO("device id = 0x%08" PRIx32 "", device_id);
+	int page_divisor = 2;
+	int size_multiplier = 11;
 
 	/* set max flash size depending on family */
 	switch (device_id & 0xfff) {
+	case 0x470:
+		max_flash_size_in_kb = 2048;
+		page_divisor = 8;
+		size_multiplier = 12;
+		break;
 	case 0x461:
 	case 0x415:
 		max_flash_size_in_kb = 1024;
@@ -632,7 +639,7 @@ static int stm32l4_probe(struct flash_bank *bank)
 		return retval;
 
 	/* only devices with < 1024 kiB may be set to single bank dual banks */
-	if ((flash_size_in_kb == 1024) || !(options & OPT_DUALBANK))
+	if ((flash_size_in_kb == 2048) || !(options & OPT_DUALBANK))
 		stm32l4_info->bank2_start = 256;
 	else
 		stm32l4_info->bank2_start = flash_size_in_kb << 9;
@@ -641,7 +648,7 @@ static int stm32l4_probe(struct flash_bank *bank)
 	assert((flash_size_in_kb != 0xffff) && flash_size_in_kb);
 
 	/* calculate numbers of pages */
-	int num_pages = flash_size_in_kb / 2;
+	int num_pages = flash_size_in_kb / page_divisor;
 
 	/* check that calculation result makes sense */
 	assert(num_pages > 0);
@@ -652,15 +659,15 @@ static int stm32l4_probe(struct flash_bank *bank)
 	}
 
 	bank->base = base_address;
-	bank->size = num_pages * (1 << 11);
+	bank->size = num_pages * (1 << size_multiplier);
 	bank->num_sectors = num_pages;
 	bank->sectors = malloc(sizeof(struct flash_sector) * num_pages);
 	if (!bank->sectors)
 		return ERROR_FAIL; /* Checkme: What better error to use?*/
 
 	for (i = 0; i < num_pages; i++) {
-		bank->sectors[i].offset = i << 11;
-		bank->sectors[i].size = 1 << 11;
+		bank->sectors[i].offset = i << size_multiplier;
+		bank->sectors[i].size = 1 << size_multiplier;
 		bank->sectors[i].is_erased = -1;
 		bank->sectors[i].is_protected = 1;
 	}
@@ -703,6 +710,10 @@ static int get_stm32l4_info(struct flash_bank *bank, char *buf, int buf_size)
 	const char *device_str;
 
 	switch (device_id) {
+	case 0x470:
+		device_str = "STM32L4R/4Sxx";
+		break;
+
 	case 0x461:
 		device_str = "STM32L496/4A6";
 		break;
